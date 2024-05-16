@@ -3,9 +3,9 @@ Description=MCRCON Bot
 After=network.target
 
 [Service]
-Environment="TOKEN=6944699555:AAEjRWsPwmnghUrOPMbXG02Jdp2XusWkVLM" SERVER_IP=127.0.0.1 PASSWORD="
+Environment="TOKEN= SERVER_IP=127.0.0.1 RCON_PASSWORD="
 Type=simple
-ExecStart=<path-to-venv>/bin/python anecdot_bot.py
+ExecStart=/home/dmitry/minexraftelebot/.venv/bin/python /home/dmitry/minexraftelebot/main.py
 Restart=always
 User=root
 Group=root
