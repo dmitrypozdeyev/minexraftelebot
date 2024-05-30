@@ -1,5 +1,5 @@
 import os
 
-TOKEN = os.environ.get("TOKEN")
-RCON_PASSWORD = os.environ.get("RCON_PASSWORD")
-SERVER_IP = os.environ.get("SERVER_IP")
+TOKEN = "6858289264:AAGeh67wQAbuqdmGNoeJLuY7ds4HiM2uY30"
+RCON_PASSWORD = "2BDED55CA7F2393706"
+SERVER_IP = "46.148.136.11"

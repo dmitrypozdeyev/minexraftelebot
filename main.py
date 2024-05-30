@@ -1,10 +1,9 @@
 from telebot import TeleBot, types
-from mcrcon import MCRcon
 from config import *
-
+from rconadmin import RCONAdmin 
 
 bot = TeleBot(TOKEN)
-mcr = MCRcon(SERVER_IP, RCON_PASSWORD)
+mcr = RCONAdmin(SERVER_IP, RCON_PASSWORD)
 
 @bot.message_handler(commands=["start"])
 def start(message):
@@ -12,9 +11,6 @@ def start(message):
 
 @bot.message_handler(content_types=["text"])
 def text(message : types.Message):
-    mcr.connect()
-    resp = mcr.command(message.text)
-    bot.send_message(message.chat.id, resp)
-    mcr.disconnect()
+    bot.send_message(message.chat.id, mcr.command(message.text))
 
 bot.infinity_polling()
