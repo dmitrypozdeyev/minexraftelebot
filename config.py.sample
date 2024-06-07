@@ -1,0 +1,11 @@
+import os
+
+TOKEN = 
+RCON_PASSWORD = 
+SERVER_IP = 
+DOCS = {
+    "Паспорт":"passport",
+    "Свидетельство сотрудника загса":"ssz",
+    "Полис":"polis",
+    "Свидетельство о рождении":"sor"
+}
