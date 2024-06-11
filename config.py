@@ -1,8 +1,8 @@
 import os
 
-TOKEN = "6858289264:AAGeh67wQAbuqdmGNoeJLuY7ds4HiM2uY30"
-RCON_PASSWORD = "2BDED55CA7F2393706"
-SERVER_IP = "46.148.136.11"
+TOKEN = 
+RCON_PASSWORD = 
+SERVER_IP = 
 DOCS = {
     "Паспорт":"passport",
     "Свидетельство сотрудника загса":"ssz",
