@@ -1,102 +1,103 @@
 from telebot import TeleBot, types
+from rconadmin import RCONAdmin
 from config import *
-from rconadmin import RCONAdmin 
+from telebotadmin import Telebotadmin
 
 bot = TeleBot(TOKEN)
 mcr = RCONAdmin(SERVER_IP, RCON_PASSWORD)
-users = {}
+adm = Telebotadmin(bot)
 
-def playersmenu():
-    menu = types.ReplyKeyboardMarkup(one_time_keyboard=True,row_width=1)
+
+def playersmenu(prefix):
+    menu = types.InlineKeyboardMarkup()
     for player in mcr.playerlist():
-        menu.add(types.KeyboardButton(player))
-    return menu
-
-def playersinlinemenu():
-    menu = types.InlineKeyboardMarkup(row_width=1)
-    for player in mcr.playerlist():
-        menu.add(types.InlineKeyboardButton(text=player, callback_data=f"qap{player}"))
-    return menu
-
-def weaponsmenu():
-    menu = types.InlineKeyboardMarkup(row_width=1)
-    for weapon in WEAPONS.keys():
-        menu.add(types.InlineKeyboardButton(text=weapon, callback_data=f"weapon{WEAPONS[weapon]}"))
-    return menu
-
-def itensmenu():
-    menu = types.InlineKeyboardMarkup(row_width=1)
-    for armor in ARMOR.keys():
-        menu.add(types.InlineKeyboardButton(text=armor, callback_data=f"item{ARMOR[armor]}"))
-    return menu
-
-def docsmenu():
-    menu = types.InlineKeyboardMarkup(row_width=1)
-    for docname in DOCS.keys():
-        menu.add(types.InlineKeyboardButton(text=docname, callback_data=DOCS[docname]))
+        menu.add(types.InlineKeyboardButton(text=f"{player}", callback_data=f"{prefix}{player}"))
     return menu
 
 
-def selectdoc(message : types.Message):
-    users[message.chat.id] = message.text
-    bot.send_message(message.chat.id, f"Какой документ вы ходите выдать игроку {users[message.chat.id]}?", reply_markup=docsmenu())
+def itemsmenu(items: dict, prefix):
+    menu = types.InlineKeyboardMarkup()
+    for item in items.keys():
+        menu.add(types.InlineKeyboardButton(text=f"{items[item]}", callback_data=f"{prefix}{item}"))
+    return menu
 
 
+@bot.message_handler(commands=['start'])
+def start_handler(message: types.Message):
+    adm.adduserm(message)
+    bot.send_message(message.chat.id,
+                     f"Привет, я RCON бот городка Данилы. Вы зарегистрированы как {adm.getpermm(message)}.")
 
-@bot.message_handler(commands=["start"])
-def start(message):
-    bot.send_message(message.chat.id, "Привет, я бот ркон консоли майнкрафт сервера. Просто отправляй мне команды как будто ты пишешь из в rcon")
 
-@bot.message_handler(commands=["playerlist"])
-def showplayers_handler(message : types.Message):
+@bot.message_handler(commands=['playerlist'])
+@adm.setaccess(2)
+def playerlist_handler(message: types.Message):
     players = "\n".join(mcr.playerlist())
-    bot.send_message(message.chat.id, players)
-
-@bot.message_handler(commands=["giveweapon"])
-def giveweapon_handler(message : types.Message):
-    bot.send_message(message.chat.id, "Какое оружие вы хотите выдать", reply_markup=weaponsmenu())
-
-@bot.callback_query_handler(func = lambda call : call.data.startswith("weapon"))
-def giveweapon_handler(callback : types.CallbackQuery):
-    users[callback.message.chat.id] = callback.data
-    bot.send_message(callback.message.chat.id, f"Кому вы хотите выдать оружие?", reply_markup=playersinlinemenu())
-
-@bot.callback_query_handler(func = lambda call : call.data.startswith("qap") and users[call.message.chat.id].startswith("weapon"))
-def giveweapon_handler(callback : types.CallbackQuery):
-    weapon = users[callback.message.chat.id][6:]
-    mcr.giveweapon(callback.data[3:], weapon)
-    bot.send_message(callback.message.chat.id, f"Выдано оружие {weapon} игроку {callback.data[3:]}")
-
-@bot.message_handler(commands=["giveitem"])
-def giveitem_handler(message : types.Message):
-    bot.send_message(message.chat.id, "Какой предмет вы хотите выдать", reply_markup=itensmenu())
-
-@bot.callback_query_handler(func = lambda call : call.data.startswith("item"))
-def giveitem_handler(callback : types.CallbackQuery):
-    users[callback.message.chat.id] = callback.data
-    bot.send_message(callback.message.chat.id, f"Кому вы хотите выдать предмет?", reply_markup=playersinlinemenu())
+    bot.send_message(message.chat.id, f"Игроки на сервере:\n{players}")
 
 
-@bot.callback_query_handler(func = lambda call : call.data.startswith("qap") and users[call.message.chat.id].startswith("item"))
-def giveitem_handler(callback : types.CallbackQuery):
-    item = users[callback.message.chat.id][4:]
-    mcr.giveitem(callback.data[3:], item)
-    bot.send_message(callback.message.chat.id, f"Выдан предмет {item} игроку {callback.data[3:]}")
-
-@bot.message_handler(commands=["givedoc"])
-def givedoc_handler(message : types.Message):
-    bot.send_message(message.chat.id, "Кому вы хотите выдать документ", reply_markup=playersmenu())
-    bot.register_next_step_handler(message, selectdoc)
-
-@bot.callback_query_handler(func = lambda call : True)
-def givegoc_handler(callback : types.CallbackQuery):
-    mcr.givedoc(users[callback.message.chat.id], callback.data)
-    bot.send_message(callback.message.chat.id, f"Выдан документ игроку {users[callback.message.chat.id]}")
+@bot.message_handler(commands=['givedoc'])
+@adm.setaccess(1)
+def givedoc_selectuser(message: types.Message):
+    bot.send_message(message.chat.id, "Выберите игрока", reply_markup=playersmenu("doc!"))
 
 
+@bot.callback_query_handler(func=lambda call: "doc!" in call.data)
+def givedoc_selectdoc(callback: types.CallbackQuery):
+    player = callback.data[4:]
+    bot.send_message(callback.message.chat.id, "Выберите документ", reply_markup=itemsmenu(DOCS, f"{player}|doc|"))
 
-@bot.message_handler(content_types=["text"])
-def text(message : types.Message):
-    bot.send_message(message.chat.id, mcr.command(message.text))
 
-if __name__ == "__main__": bot.infinity_polling()
+@bot.callback_query_handler(func=lambda call: "|doc|" in call.data)
+def givedoc_gice(callback: types.CallbackQuery):
+    player, document = callback.data.split("|doc|")
+    mcr.givedoc(player, document)
+    bot.send_message(callback.message.chat.id, f"Документ {DOCS[document]} выдан игроку {player}")
+
+
+@bot.message_handler(commands=['giveweitem'])
+@adm.setaccess(1)
+def giveitem_selectitem(message: types.Message):
+    bot.send_message(message.chat.id, "Выберите предмет", reply_markup=itemsmenu(ARMOR, "itm!"))
+
+
+@bot.callback_query_handler(func=lambda call: "itm!" in call.data)
+def giveitem_selectplayer(callback: types.CallbackQuery):
+    item = callback.data[4:]
+    bot.send_message(callback.message.chat.id, "Выберите игрока", reply_markup=playersmenu(f"{item}|itm|"))
+
+
+@bot.callback_query_handler(func=lambda call: "|itm|" in call.data)
+def giveitem_give(callback: types.CallbackQuery):
+    item, player = callback.data.split("|itm|")
+    mcr.giveitem(player, item)
+    bot.send_message(callback.message.chat.id, f"Предмет {ARMOR[item]} выдан игроку {player}")
+
+
+@bot.message_handler(commands=['giveweapon'])
+@adm.setaccess(1)
+def giveweapon_selectweapon(message: types.Message):
+    bot.send_message(message.chat.id, "Выберите оружие", reply_markup=itemsmenu(WEAPONS, "wpn!"))
+
+
+@bot.callback_query_handler(func=lambda call: "wpn!" in call.data)
+def giveweapon_selectplayer(callback: types.CallbackQuery):
+    weapon = callback.data[4:]
+    bot.send_message(callback.message.chat.id, "Выберите игрока", reply_markup=playersmenu(f"{weapon}|wpn|"))
+
+
+@bot.callback_query_handler(func=lambda call: "|wpn|" in call.data)
+def giveweapon_give(callback: types.CallbackQuery):
+    weapon, player = callback.data.split("|wpn|")
+    mcr.giveweapon(player, weapon)
+    bot.send_message(callback.message.chat.id, f"Оружие {WEAPONS[weapon]} выдано игроку {player}")
+
+
+@bot.message_handler(commands=['incperm'])
+@adm.setaccess(2)
+def incperm(message: types.Message):
+    adm.requestperminc(message)
+
+
+if __name__ == '__main__':
+    bot.infinity_polling()
